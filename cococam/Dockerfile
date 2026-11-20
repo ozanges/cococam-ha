@@ -1,6 +1,6 @@
 FROM bluenviron/mediamtx:1.21.4 AS relay
 
-FROM alpine:3.22 AS sources
+FROM alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f AS sources
 RUN apk add --no-cache ca-certificates git npm
 RUN git init -q /opt/meari \
     && git -C /opt/meari fetch --depth=1 https://github.com/saidtezel/hass-cloudedge-meari.git 4f52459653aa65d246f5d7421fbab8bac0a4af26 \
@@ -12,7 +12,7 @@ RUN npm ci --ignore-scripts --no-audit --no-fund \
     && mkdir -p /opt/hls \
     && cp node_modules/hls.js/dist/hls.min.js node_modules/hls.js/LICENSE /opt/hls/
 
-FROM python:3.12-slim-bookworm
+FROM python:3.12-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates ffmpeg \
     && rm -rf /var/lib/apt/lists/*
