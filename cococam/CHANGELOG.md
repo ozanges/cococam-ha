@@ -1,3 +1,7 @@
+# 0.1.2
+
+- Distribue une image préconstruite pour ARM64 et amd64 afin que le Supervisor puisse l’installer directement.
+
 # 0.1.1
 
 - Fixe l’image Python Debian directement dans le Dockerfile pour garantir la même construction depuis le Supervisor et Docker.

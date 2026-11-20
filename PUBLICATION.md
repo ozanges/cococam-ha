@@ -14,4 +14,4 @@ git push -u origin main
 4. Suivre [l’installation par l’interface](README.md#installer-depuis-linterface). Saisir le compte CloudEdge dans la configuration de l’application, dans Home Assistant.
 5. Sur le Pi, ouvrir **COCOCAM**, vérifier les deux vues et attendre la fin du compte à rebours. Vérifier que les deux vidéos s’arrêtent, que **Rouvrir le direct** demande un clic et que la caméra reprend sur ce clic. Fermer ensuite le panneau pendant plus de huit secondes pour vérifier la coupure liée au départ. Mesurer CPU et mémoire avec le flux arrêté, puis avec les deux vues actives.
 
-L’installation native a besoin d’un accès sortant pour construire l’image et ouvrir une session CloudEdge. L’image de la première version est construite sur le Pi. Aucun registre d’images du projet n’est requis.
+Le workflow **Publier l’image** construit les deux variantes, exécute les tests puis publie le tag multiarchitecture correspondant à la version du manifeste. Pour la première publication, rendre le package GHCR public depuis ses paramètres GitHub afin que le Supervisor puisse le télécharger. L’installation et la connexion CloudEdge nécessitent un accès sortant.
