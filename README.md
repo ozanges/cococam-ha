@@ -4,10 +4,9 @@ Deux vues COCOCAM dans le menu latéral de Home Assistant. Ouvrir la vue déclen
 
 ## Installer depuis l’interface
 
-1. Publier ce dépôt Git à une adresse joignable par le Supervisor. Le [guide de publication](PUBLICATION.md) explique la mise en ligne initiale.
-2. Dans Home Assistant OS, ouvrir **Paramètres → Applications → Installer une application → ⋮ → Dépôts**. Ajouter l’URL Git du dépôt. Installer **COCOCAM à la demande**. Le Supervisor télécharge l’image préconstruite pour son architecture.
-3. Dans **Configuration**, saisir l’e-mail et le mot de passe du compte CloudEdge. Indiquer le nom exact affiché dans CloudEdge si le compte possède plusieurs caméras. Enregistrer. Démarrer l’application ou la redémarrer si elle tournait déjà.
-4. Ouvrir l’interface Web de l’application puis activer **Afficher dans la barre latérale**. Pour un raccourci dans un tableau de bord, ouvrir le panneau, copier son chemin Home Assistant et choisir l’action de navigation d’une carte Bouton vers ce chemin.
+1. Dans Home Assistant OS, ouvrir **Paramètres → Applications → Installer une application → ⋮ → Dépôts**. Ajouter l’URL Git du dépôt. Installer **COCOCAM à la demande**. Le Supervisor télécharge l’image préconstruite pour son architecture.
+2. Dans **Configuration**, saisir l’e-mail et le mot de passe du compte CloudEdge. Indiquer le nom exact affiché dans CloudEdge si le compte possède plusieurs caméras. Enregistrer. Démarrer l’application ou la redémarrer si elle tournait déjà.
+3. Ouvrir l’interface Web de l’application puis activer **Afficher dans la barre latérale**. Pour un raccourci dans un tableau de bord, ouvrir le panneau, copier son chemin Home Assistant et choisir l’action de navigation d’une carte Bouton vers ce chemin.
 
 La barre latérale expose le panneau aux administrateurs. Home Assistant authentifie la lecture via Ingress. Les ports vidéo et de contrôle du serveur média restent internes au conteneur. L’adresse du compte CloudEdge et le mot de passe restent dans les options locales de l’app et ne figurent pas dans ce dépôt.
 
