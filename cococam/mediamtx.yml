@@ -1,0 +1,18 @@
+logLevel: warn
+api: yes
+apiAddress: 127.0.0.1:8098
+rtsp: yes
+rtspAddress: 127.0.0.1:8556
+rtspTransports: [tcp]
+rtmp: no
+hls: yes
+hlsAddress: 127.0.0.1:8097
+hlsVariant: fmp4
+hlsSegmentCount: 4
+hlsSegmentDuration: 1s
+webrtc: no
+srt: no
+moq: no
+paths:
+  '~^live/[a-f0-9]{32}/[01]$':
+    source: publisher

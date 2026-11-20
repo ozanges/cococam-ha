@@ -1,0 +1,4 @@
+aiohttp==3.13.5
+paho-mqtt==2.2.0
+pycryptodome==4.5.0
+requests==2.34.2

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="cococam-key" content="__TOKEN__">
+  <title>COCOCAM</title>
+  <link rel="stylesheet" href="./assets/panel.css">
+  <script defer src="./assets/hls.min.js"></script>
+  <script defer src="./assets/panel.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>COCOCAM</h1>
+        <p id="status" role="status">Connexion à la passerelle…</p>
+      </div>
+      <div class="actions">
+        <output id="timer" aria-label="Temps restant" hidden></output>
+        <button id="start" hidden>Ouvrir le direct</button>
+        <button id="extend" hidden>Prolonger</button>
+        <button id="stop" class="secondary" hidden>Couper</button>
+      </div>
+    </header>
+    <section id="views" aria-label="Vues de la caméra">
+      <figure>
+        <div class="view"><video id="view-0" muted playsinline controls></video></div>
+        <figcaption>Vue 1 <span id="feedback-0" aria-live="polite"></span></figcaption>
+      </figure>
+      <figure>
+        <div class="view"><video id="view-1" muted playsinline controls></video></div>
+        <figcaption>Vue 2 <span id="feedback-1" aria-live="polite"></span></figcaption>
+      </figure>
+    </section>
+  </main>
+</body>
+</html>

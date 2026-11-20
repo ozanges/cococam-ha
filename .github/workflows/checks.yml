@@ -1,0 +1,31 @@
+name: Vérifications
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux/amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Construire le conteneur
+        run: docker build --platform "${{ matrix.platform }}" -t cococam-ha:ci cococam
+      - name: Vérifier le JavaScript
+        run: node --check cococam/bridge/static/panel.js
+      - name: Tester la session et les deux flux HLS
+        run: |
+          docker run --rm --network none -e COCOCAM_MEDIA_TEST=1 \
+            -e PYTHONPATH=/opt/cococam -v "$PWD:/workspace:ro" -w /workspace \
+            cococam-ha:ci python -m unittest discover -s tests -v

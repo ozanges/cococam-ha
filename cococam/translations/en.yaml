@@ -1,0 +1,19 @@
+configuration:
+  email:
+    name: CloudEdge email
+    description: Email address of the account linked to the COCOCAM.
+  password:
+    name: CloudEdge password
+    description: Password for the CloudEdge account.
+  camera_name:
+    name: Camera name
+    description: Exact name in CloudEdge if the account has more than one camera.
+  country:
+    name: Account country
+    description: Two-letter country code.
+  phone_code:
+    name: Country calling code
+    description: Country calling code without a plus sign.
+  live_seconds:
+    name: Live view duration
+    description: Seconds allowed when the video starts or the timer is extended.

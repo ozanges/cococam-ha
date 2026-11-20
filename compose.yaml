@@ -1,0 +1,17 @@
+services:
+  cococam:
+    build: ./cococam
+    init: true
+    environment:
+      COCOCAM_MODE: standalone
+    ports:
+      - 127.0.0.1:8099:8099
+    volumes:
+      - type: bind
+        source: ./options.local.json
+        target: /data/options.json
+        read_only: true
+        bind:
+          create_host_path: false
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
