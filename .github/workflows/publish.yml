@@ -110,14 +110,15 @@ jobs:
           ref: ${{ needs.plan.outputs.source }}
           fetch-depth: 0
       - name: Publier le tag multiarchitecture
+        id: publish_image
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           git fetch origin +refs/heads/main:refs/remotes/origin/main
           if ! git diff --quiet "$SOURCE_SHA" origin/main -- cococam; then
-            echo "::error::COCOCAM a changé pendant le build. La publication suivante prendra le relais."
-            exit 1
+            echo "::notice::Build remplacé par un changement plus récent de COCOCAM."
+            exit 0
           fi
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           if docker buildx imagetools inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
@@ -127,7 +128,9 @@ jobs:
           docker buildx imagetools create -t "$IMAGE:$VERSION" \
             "$IMAGE:build-$VERSION-$GITHUB_RUN_ID-amd64" "$IMAGE:build-$VERSION-$GITHUB_RUN_ID-aarch64"
           docker buildx imagetools inspect "$IMAGE:$VERSION"
+          echo 'published=true' >> "$GITHUB_OUTPUT"
       - name: Rendre la version visible dans Home Assistant
+        if: steps.publish_image.outputs.published == 'true'
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
@@ -135,8 +138,8 @@ jobs:
           for attempt in 1 2 3; do
             git fetch origin +refs/heads/main:refs/remotes/origin/main
             if ! git diff --quiet "$SOURCE_SHA" origin/main -- cococam; then
-              echo "::error::COCOCAM a changé pendant la publication. La publication suivante prendra le relais."
-              exit 1
+              echo "::notice::Publication remplacée par un changement plus récent de COCOCAM."
+              exit 0
             fi
             git switch --detach origin/main
             python3 .github/scripts/release.py publish "$VERSION"
