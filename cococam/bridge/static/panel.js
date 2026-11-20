@@ -9,6 +9,8 @@ const feedback = [element("feedback-0"), element("feedback-1")];
 const key = document.querySelector('meta[name="cococam-key"]').content;
 const layout = document.body.dataset.layout;
 const embedded = layout !== "panel";
+const VIDEO_RETRY_DELAYS = [750, 1500, 3000];
+const CODEC_ERRORS = new Set(["manifestIncompatibleCodecsError", "bufferIncompatibleCodecsError"]);
 const errors = {
   credentials: "Renseignez le compte CloudEdge dans la configuration de l’application.",
   login: "Connexion CloudEdge refusée ou indisponible.",
@@ -20,7 +22,7 @@ const errors = {
 let socket;
 let reconnect;
 let generation;
-let players = [];
+let videoCleanups = [];
 let activeDocument = true;
 let panelVisible = !("IntersectionObserver" in window);
 let startPending = false;
@@ -33,19 +35,100 @@ function startRequested() {
 }
 
 function unloadVideo() {
-  for (const player of players) player.destroy();
-  players = [];
-  videos.forEach((video, lane) => {
+  for (const cleanup of videoCleanups) cleanup();
+  videoCleanups = [];
+  generation = undefined;
+}
+
+function playLane(video, lane, next) {
+  const message = feedback[lane];
+  const source = `./media/${next}/${lane}/index.m3u8`;
+  const native = video.canPlayType("application/vnd.apple.mpegurl");
+  const Hls = window.Hls;
+  let player;
+  let retry;
+  let attempts = 0;
+  let closed = false;
+
+  function resetPlayer() {
+    video.onerror = null;
+    const previous = player;
+    player = undefined;
+    previous?.destroy();
     if (video.hasAttribute("src") || video.hasAttribute("data-playing")) {
       video.pause();
-      video.onerror = null;
       video.removeAttribute("src");
       video.removeAttribute("data-playing");
       video.load();
     }
-    feedback[lane].textContent = "";
-  });
-  generation = undefined;
+  }
+
+  function playing() {
+    if (!closed && retry === undefined) message.textContent = "";
+  }
+
+  function display() {
+    video.setAttribute("data-playing", "");
+    video.play().catch((error) => {
+      if (!closed && retry === undefined && error.name === "NotAllowedError") {
+        message.textContent = "Appuyez sur lecture.";
+      }
+    });
+  }
+
+  function loadFailed(details) {
+    if (closed || retry !== undefined) return;
+    if (CODEC_ERRORS.has(details?.details)) {
+      message.textContent = "Lecture HEVC indisponible dans ce navigateur.";
+      return;
+    }
+    if ([401, 403].includes(details?.response?.code)) {
+      message.textContent = "Accès à la vidéo refusé. Rechargez la page.";
+      return;
+    }
+    if (attempts >= VIDEO_RETRY_DELAYS.length) {
+      message.textContent = "Le flux vidéo n’a pas pu être chargé.";
+      return;
+    }
+    message.textContent = "Nouvelle tentative de lecture…";
+    retry = setTimeout(() => {
+      retry = undefined;
+      resetPlayer();
+      load();
+    }, VIDEO_RETRY_DELAYS[attempts++]);
+  }
+
+  function load() {
+    if (native) {
+      video.onerror = () => loadFailed();
+      video.src = source;
+      display();
+    } else if (Hls?.isSupported()) {
+      const current = new Hls({lowLatencyMode: false});
+      player = current;
+      current.on(Hls.Events.ERROR, (_event, details) => {
+        if (current === player && details.fatal) loadFailed(details);
+      });
+      current.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (current === player && retry === undefined) display();
+      });
+      current.attachMedia(video);
+      current.loadSource(source);
+    } else {
+      message.textContent = Hls ? "Lecture HEVC indisponible dans ce navigateur." : "Le lecteur vidéo n’a pas chargé.";
+    }
+  }
+
+  message.textContent = "Préparation de la vidéo…";
+  video.addEventListener("playing", playing);
+  load();
+  return () => {
+    closed = true;
+    clearTimeout(retry);
+    video.removeEventListener("playing", playing);
+    resetPlayer();
+    message.textContent = "";
+  };
 }
 
 function play(next) {
@@ -54,33 +137,7 @@ function play(next) {
   generation = next;
   videos.forEach((video, lane) => {
     if (embedded && layout !== "both" && layout !== String(lane + 1)) return;
-    const source = `./media/${next}/${lane}/index.m3u8`;
-    const display = () => {
-      if (generation !== next) return;
-      video.setAttribute("data-playing", "");
-      video.play().catch(() => {
-        if (generation === next) feedback[lane].textContent = "Appuyez sur lecture.";
-      });
-    };
-    const incompatible = () => {
-      if (generation === next) feedback[lane].textContent = "Lecture HEVC indisponible dans ce navigateur.";
-    };
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.onerror = incompatible;
-      video.src = source;
-      display();
-    } else if (window.Hls?.isSupported()) {
-      const player = new window.Hls({lowLatencyMode: false});
-      players.push(player);
-      player.on(window.Hls.Events.ERROR, (_event, details) => {
-        if (details.fatal) incompatible();
-      });
-      player.on(window.Hls.Events.MANIFEST_PARSED, display);
-      player.attachMedia(video);
-      player.loadSource(source);
-    } else {
-      incompatible();
-    }
+    videoCleanups.push(playLane(video, lane, next));
   });
 }
 

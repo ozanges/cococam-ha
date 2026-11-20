@@ -1,3 +1,8 @@
+# 0.1.4
+
+- Relance automatiquement le lecteur après une erreur temporaire de chargement HLS pendant le direct.
+- Affiche des messages distincts pour les erreurs de chargement et les incompatibilités vidéo signalées par le lecteur.
+
 # 0.1.3
 
 - Ajoute un lecteur intégré pour la carte de tableau de bord COCOCAM, avec choix de l’objectif et démarrage au clic.

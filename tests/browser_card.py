@@ -19,10 +19,23 @@ HLS = """
 window.Hls = class {
   static isSupported() { return true; }
   static Events = {ERROR: 'error', MANIFEST_PARSED: 'manifest'};
-  on() {}
-  attachMedia() {}
+  callbacks = {};
+  on(event, callback) { this.callbacks[event] = callback; }
+  attachMedia(video) { this.video = video; }
   destroy() {}
-  async loadSource(source) { await fetch(source); }
+  async loadSource(source) {
+    const result = await fetch(source);
+    if (!result.ok) {
+      this.callbacks.error?.('error', {
+        fatal: true, type: 'networkError', details: 'manifestLoadError',
+        response: {code: result.status},
+      });
+      window.manifestFailureHandled = true;
+    } else {
+      this.callbacks.manifest?.('manifest');
+      this.video.dispatchEvent(new Event('playing'));
+    }
+  }
 };
 """
 
@@ -31,10 +44,15 @@ async def check(hls_path):
     os.environ["COCOCAM_HLS_JS"] = str(hls_path)
     now = [100.0]
     starts, stops, lanes = [], [], []
+    initial_failure = True
     relay = web.Application()
 
     async def playlist(request):
+        nonlocal initial_failure
         lanes.append(request.match_info["lane"])
+        if initial_failure:
+            initial_failure = False
+            return web.Response(status=502)
         return web.Response(text="#EXTM3U\n", content_type="application/mpegurl")
 
     relay.router.add_get("/live/{generation}/{lane}/index.m3u8", playlist)
@@ -113,6 +131,14 @@ async def check(hls_path):
                     await until(lambda: len(lanes) >= len(expected))
                     assert set(lanes) == expected, lanes
                     assert len(starts) == count + 1
+                    if view == "1":
+                        frame = await page.locator("iframe").element_handle()
+                        await (await frame.content_frame()).wait_for_function("window.manifestFailureHandled")
+                        feedback = await iframe.locator("#feedback-0").text_content()
+                        assert feedback != "Lecture HEVC indisponible dans ce navigateur.", feedback
+                        await until(lambda: lanes.count("0") >= 2)
+                        await expect(iframe.locator("#feedback-0")).to_have_text("")
+                        assert len(starts) == count + 1
                     for lane in ("0", "1"):
                         tile = iframe.locator(f"#lane-{lane}")
                         if lane in expected:
