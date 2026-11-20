@@ -1,4 +1,4 @@
-FROM bluenviron/mediamtx:1.21.4 AS relay
+FROM bluenviron/mediamtx:1.21.4@sha256:c730bccdbc8739f8f0c13cefe9bea8b61926f599b88fa4d0d229baa91846c7bc AS relay
 
 FROM alpine:3.22 AS sources
 RUN apk add --no-cache ca-certificates git npm
