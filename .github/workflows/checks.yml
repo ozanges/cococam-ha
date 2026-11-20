@@ -25,9 +25,17 @@ jobs:
           docker build --platform "${{ matrix.platform }}" \
             --build-arg BUILD_FROM=ghcr.io/home-assistant/base:latest -t cococam-ha:ci cococam
       - name: Vérifier le JavaScript
-        run: node --check cococam/bridge/static/panel.js
+        run: |
+          node --check cococam/bridge/static/panel.js
+          node --check dashboard/cococam-card.js
       - name: Tester la session et les deux flux HLS
         run: |
           docker run --rm --network none -e COCOCAM_MEDIA_TEST=1 \
             -e PYTHONPATH=/opt/cococam -v "$PWD:/workspace:ro" -w /workspace \
             cococam-ha:ci python -m unittest discover -s tests -v
+      - name: Tester la carte dans Chromium
+        if: matrix.platform == 'linux/amd64'
+        run: |
+          docker run --rm -e PYTHONPATH=/workspace/cococam -v "$PWD:/workspace:ro" -w /workspace \
+            mcr.microsoft.com/playwright/python:v1.51.0-noble bash -c \
+            'pip -q install aiohttp==3.13.5 playwright==1.51.0 && python tests/browser_card.py'

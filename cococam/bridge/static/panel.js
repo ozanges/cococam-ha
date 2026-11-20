@@ -7,6 +7,8 @@ const stop = element("stop");
 const videos = [element("view-0"), element("view-1")];
 const feedback = [element("feedback-0"), element("feedback-1")];
 const key = document.querySelector('meta[name="cococam-key"]').content;
+const layout = document.body.dataset.layout;
+const embedded = layout !== "panel";
 const errors = {
   credentials: "Renseignez le compte CloudEdge dans la configuration de l’application.",
   login: "Connexion CloudEdge refusée ou indisponible.",
@@ -21,6 +23,14 @@ let generation;
 let players = [];
 let activeDocument = true;
 let panelVisible = !("IntersectionObserver" in window);
+let startPending = false;
+
+function startRequested() {
+  if (startPending && !document.hidden && socket?.readyState === WebSocket.OPEN) {
+    startPending = false;
+    send("start");
+  }
+}
 
 function unloadVideo() {
   for (const player of players) player.destroy();
@@ -43,6 +53,7 @@ function play(next) {
   unloadVideo();
   generation = next;
   videos.forEach((video, lane) => {
+    if (embedded && layout !== "both" && layout !== String(lane + 1)) return;
     const source = `./media/${next}/${lane}/index.m3u8`;
     const display = () => {
       if (generation !== next) return;
@@ -112,7 +123,9 @@ function connect() {
     if (socket === current) render(JSON.parse(event.data));
   };
   current.onopen = () => {
-    if (socket === current) send("open");
+    if (socket !== current) return;
+    if (embedded) startRequested();
+    else send("open");
   };
   current.onclose = () => {
     if (socket !== current) return;
@@ -134,8 +147,19 @@ function close() {
 start.addEventListener("click", () => send("start"));
 extend.addEventListener("click", () => send("extend"));
 stop.addEventListener("click", () => send("stop"));
-document.addEventListener("visibilitychange", () => document.hidden ? close() : connect());
-window.addEventListener("pagehide", () => { activeDocument = false; close(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    startPending = false;
+    close();
+  } else {
+    connect();
+  }
+});
+window.addEventListener("pagehide", () => {
+  activeDocument = false;
+  startPending = false;
+  close();
+});
 window.addEventListener("pageshow", () => { activeDocument = true; connect(); });
 if ("IntersectionObserver" in window) {
   const observer = new IntersectionObserver(([entry]) => {
@@ -144,5 +168,21 @@ if ("IntersectionObserver" in window) {
     else close();
   });
   observer.observe(document.querySelector("main"));
+}
+if (embedded && window.parent !== window) {
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.origin !== location.origin) return;
+    if (event.data?.type === "cococam/start") {
+      startPending = true;
+      startRequested();
+    }
+  });
+  const observer = new ResizeObserver(([entry]) => {
+    window.parent.postMessage({
+      type: "cococam/resize", height: Math.ceil(entry.target.getBoundingClientRect().height),
+    }, location.origin);
+  });
+  observer.observe(document.querySelector("main"));
+  window.parent.postMessage({type: "cococam/ready"}, location.origin);
 }
 connect();

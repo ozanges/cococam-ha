@@ -9,7 +9,7 @@
   <script defer src="./assets/hls.min.js"></script>
   <script defer src="./assets/panel.js"></script>
 </head>
-<body>
+<body data-layout="__LAYOUT__">
   <main>
     <header>
       <div>
@@ -24,11 +24,11 @@
       </div>
     </header>
     <section id="views" aria-label="Vues de la caméra">
-      <figure>
+      <figure id="lane-0">
         <div class="view"><video id="view-0" muted playsinline controls></video></div>
         <figcaption>Vue 1 <span id="feedback-0" aria-live="polite"></span></figcaption>
       </figure>
-      <figure>
+      <figure id="lane-1">
         <div class="view"><video id="view-1" muted playsinline controls></video></div>
         <figcaption>Vue 2 <span id="feedback-1" aria-live="polite"></span></figcaption>
       </figure>

@@ -43,3 +43,9 @@ video:not([data-playing]) { visibility: hidden; }
 figcaption { display: flex; gap: 8px 16px; flex-wrap: wrap; padding: 12px 14px; font-weight: 600; }
 figcaption span { color: var(--muted); font-weight: 400; }
 [hidden] { display: none !important; }
+body:not([data-layout="panel"]) { background: var(--surface); }
+body:not([data-layout="panel"]) main { padding: 0 12px 12px; }
+body:not([data-layout="panel"]) header { margin-bottom: 10px; gap: 6px; }
+body:not([data-layout="panel"]) h1 { display: none; }
+body:not([data-layout="panel"]) section { gap: 8px; }
+body[data-layout="1"] #lane-1, body[data-layout="2"] #lane-0 { display: none; }

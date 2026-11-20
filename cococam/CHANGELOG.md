@@ -1,3 +1,7 @@
+# 0.1.3
+
+- Ajoute un lecteur intégré pour la carte de tableau de bord COCOCAM, avec choix de l’objectif et démarrage au clic.
+
 # 0.1.2
 
 - Distribue une image préconstruite pour ARM64 et amd64 afin que le Supervisor puisse l’installer directement.

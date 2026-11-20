@@ -89,8 +89,12 @@ async def security(request, handler):
 
 
 async def index(request):
+    views = request.query.get("embed")
+    if views is not None and views not in {"1", "2", "both"}:
+        raise web.HTTPBadRequest()
     markup = (HERE / "static/index.html").read_text()
-    return web.Response(text=markup.replace("__TOKEN__", request.app[TOKEN]), content_type="text/html")
+    markup = markup.replace("__TOKEN__", request.app[TOKEN]).replace("__LAYOUT__", views or "panel")
+    return web.Response(text=markup, content_type="text/html")
 
 
 async def asset(request):
