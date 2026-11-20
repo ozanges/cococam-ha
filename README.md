@@ -2,7 +2,13 @@
 
 Deux vues COCOCAM dans le menu latéral de Home Assistant. Ouvrir la vue déclenche une seule session CloudEdge. La passerelle réutilise le transport KCP/VVP testé sur une COCOCAM B40AA avec le firmware 6.1.4.20251120, et republie la vidéo HEVC en HLS sans la réencoder.
 
+![Panneau COCOCAM dans Home Assistant avec les deux vues en direct, le compte à rebours et les boutons Prolonger et Couper](docs/images/home-assistant-direct-deux-vues.png)
+
 ## Avant l’installation Home Assistant
+
+<p align="center">
+  <img src="docs/images/cococam-double-objectif.png" width="240" alt="Caméra COCOCAM à deux objectifs avec son panneau solaire">
+</p>
 
 1. Installe l’application officielle **CloudEdge** sur ton téléphone Android ou iOS.
 2. Crée un compte CloudEdge avec une adresse e-mail et un mot de passe, ou connecte-toi à ton compte existant. Note les identifiants utilisés. Home Assistant en aura besoin pour ouvrir une session CloudEdge indépendante du téléphone.
@@ -32,6 +38,10 @@ La barre latérale expose le panneau aux administrateurs. Home Assistant authent
 La barre latérale expose le panneau aux administrateurs. Home Assistant authentifie la lecture via Ingress. Les ports vidéo et de contrôle du serveur média restent internes au conteneur. L’adresse du compte CloudEdge et le mot de passe restent dans les options locales de l’app et ne figurent pas dans ce dépôt.
 
 ## Vidéo dans un tableau de bord
+
+<p align="center">
+  <img src="docs/images/home-assistant-carte-cococam.png" width="360" alt="Carte COCOCAM dans un tableau de bord Home Assistant, avec la première vue en direct">
+</p>
 
 Avec l’application 0.1.3 ou ultérieure, copier [cococam-card.js](dashboard/cococam-card.js) dans le répertoire `www` de Home Assistant, puis ajouter `/local/cococam-card.js` comme **Module JavaScript** dans **Paramètres → Tableaux de bord → Ressources**. L’option Ressources apparaît en mode avancé. Si le dossier `www` vient d’être créé, redémarrer Home Assistant pour activer `/local/`. Recharger le navigateur puis ajouter la carte **COCOCAM en direct** dans l’éditeur du tableau de bord.
 
