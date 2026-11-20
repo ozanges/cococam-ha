@@ -1,5 +1,3 @@
-ARG BUILD_FROM=python:3.12-slim-bookworm
-
 FROM bluenviron/mediamtx:1.21.4 AS relay
 
 FROM alpine:3.22 AS sources
@@ -15,7 +13,7 @@ RUN mkdir -p /opt/hls /tmp/hls \
     && tar -xzf /tmp/hls.tgz -C /tmp/hls \
     && cp /tmp/hls/package/dist/hls.min.js /tmp/hls/package/LICENSE /opt/hls/
 
-FROM ${BUILD_FROM}
+FROM python:3.12-slim-bookworm
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates ffmpeg \
     && rm -rf /var/lib/apt/lists/*

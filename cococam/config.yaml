@@ -1,5 +1,5 @@
 name: COCOCAM à la demande
-version: "0.1.0"
+version: "0.1.1"
 slug: cococam
 description: Direct COCOCAM à durée limitée, depuis Home Assistant
 arch:

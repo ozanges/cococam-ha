@@ -21,7 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Construire le conteneur
-        run: docker build --platform "${{ matrix.platform }}" -t cococam-ha:ci cococam
+        run: |
+          docker build --platform "${{ matrix.platform }}" \
+            --build-arg BUILD_FROM=ghcr.io/home-assistant/base:latest -t cococam-ha:ci cococam
       - name: Vérifier le JavaScript
         run: node --check cococam/bridge/static/panel.js
       - name: Tester la session et les deux flux HLS
