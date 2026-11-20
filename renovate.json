@@ -1,0 +1,40 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "docker:pinDigests"],
+  "platformAutomerge": false,
+  "pip_requirements": {"enabled": false},
+  "pip-compile": {"managerFilePatterns": ["/^cococam\/requirements\\.txt$/"]},
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^cococam\/Dockerfile$/"],
+      "matchStrings": ["git -C /opt/meari fetch --depth=1 (?<packageName>https://github\\.com/saidtezel/hass-cloudedge-meari\\.git) (?<currentDigest>[a-f0-9]{40})"],
+      "depNameTemplate": "hass-cloudedge-meari",
+      "datasourceTemplate": "git-refs",
+      "currentValueTemplate": "main"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["pip-compile"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "automerge": true
+    },
+    {
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["digest"],
+      "automerge": true
+    },
+    {
+      "matchPackageNames": ["bluenviron/mediamtx", "hls.js", "https://github.com/saidtezel/hass-cloudedge-meari.git"],
+      "automerge": false,
+      "groupName": null,
+      "labels": ["dependencies", "video-review"]
+    }
+  ]
+}

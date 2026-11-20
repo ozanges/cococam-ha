@@ -3,23 +3,59 @@ name: Publier l’image
 on:
   push:
     branches: [main]
-    paths: [cococam/config.yaml, .github/workflows/publish.yml]
+    paths:
+      - 'cococam/**'
   workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
-  group: publish-cococam-${{ github.ref }}
-  cancel-in-progress: false
+  group: publish-cococam
+  queue: max
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
-  build:
+  plan:
     if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      source: ${{ steps.plan.outputs.source }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Choisir la prochaine version
+        id: plan
+        env:
+          RUN_EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          last_release=$(git log -1 --format=%H --grep='^Release COCOCAM ' -- cococam/config.yaml)
+          if [[ "$RUN_EVENT" == push && -n "$last_release" ]] &&
+              git diff --quiet "$last_release" HEAD -- cococam; then
+            exit 0
+          fi
+          version=$(python3 .github/scripts/release.py plan)
+          git rev-parse HEAD | sed 's/^/source=/' >> "$GITHUB_OUTPUT"
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: plan
+    if: needs.plan.outputs.version != ''
+    uses: ./.github/workflows/checks.yml
+    with:
+      source: ${{ needs.plan.outputs.source }}
+
+  build:
+    needs: [plan, verify]
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -33,22 +69,25 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.plan.outputs.source }}
+          persist-credentials: false
       - name: Construire, tester et publier la variante
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PLATFORM: ${{ matrix.platform }}
           HA_ARCH: ${{ matrix.arch }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          SOURCE_SHA: ${{ needs.plan.outputs.source }}
         run: |
           set -euo pipefail
-          version=$(awk -F'"' '/^version: "/ {print $2}' cococam/config.yaml)
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          tag="$IMAGE:$version-$HA_ARCH"
+          tag="$IMAGE:build-$VERSION-$GITHUB_RUN_ID-$HA_ARCH"
           docker build --platform "$PLATFORM" \
             --label io.hass.type=app --label "io.hass.arch=$HA_ARCH" \
-            --label "io.hass.version=$version" \
+            --label "io.hass.version=$VERSION" \
             --label "io.hass.name=COCOCAM à la demande" \
             --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
-            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --label "org.opencontainers.image.revision=$SOURCE_SHA" \
             -t "$tag" cococam
           docker run --rm --network none -e COCOCAM_MEDIA_TEST=1 \
             -e PYTHONPATH=/opt/cococam -v "$PWD:/workspace:ro" -w /workspace \
@@ -57,18 +96,54 @@ jobs:
           docker push "$tag"
 
   manifest:
-    needs: build
+    needs: [plan, build]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      packages: write
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+      SOURCE_SHA: ${{ needs.plan.outputs.source }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.plan.outputs.source }}
+          fetch-depth: 0
       - name: Publier le tag multiarchitecture
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          version=$(awk -F'"' '/^version: "/ {print $2}' cococam/config.yaml)
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          git fetch origin +refs/heads/main:refs/remotes/origin/main
+          if ! git diff --quiet "$SOURCE_SHA" origin/main -- cococam; then
+            echo "::error::COCOCAM a changé pendant le build. La publication suivante prendra le relais."
+            exit 1
+          fi
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker buildx imagetools create -t "$IMAGE:$version" \
-            "$IMAGE:$version-amd64" "$IMAGE:$version-aarch64"
-          docker buildx imagetools inspect "$IMAGE:$version"
+          if docker buildx imagetools inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
+            echo "::error::Le tag $VERSION existe déjà. Relancer le workflow entier pour choisir une nouvelle version."
+            exit 1
+          fi
+          docker buildx imagetools create -t "$IMAGE:$VERSION" \
+            "$IMAGE:build-$VERSION-$GITHUB_RUN_ID-amd64" "$IMAGE:build-$VERSION-$GITHUB_RUN_ID-aarch64"
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+      - name: Rendre la version visible dans Home Assistant
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch origin +refs/heads/main:refs/remotes/origin/main
+            if ! git diff --quiet "$SOURCE_SHA" origin/main -- cococam; then
+              echo "::error::COCOCAM a changé pendant la publication. La publication suivante prendra le relais."
+              exit 1
+            fi
+            git switch --detach origin/main
+            python3 .github/scripts/release.py publish "$VERSION"
+            git add cococam/config.yaml cococam/CHANGELOG.md
+            git commit -m "Release COCOCAM $VERSION"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+          done
+          exit 1

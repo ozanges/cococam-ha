@@ -1,8 +1,12 @@
 name: Vérifications
 
 on:
-  push:
   pull_request:
+  workflow_call:
+    inputs:
+      source:
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -20,10 +24,12 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ inputs.source || github.sha }}
+          persist-credentials: false
       - name: Construire le conteneur
         run: |
-          docker build --platform "${{ matrix.platform }}" \
-            --build-arg BUILD_FROM=ghcr.io/home-assistant/base:latest -t cococam-ha:ci cococam
+          docker build --platform "${{ matrix.platform }}" -t cococam-ha:ci cococam
       - name: Vérifier le JavaScript
         run: |
           node --check cococam/bridge/static/panel.js
