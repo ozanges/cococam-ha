@@ -1,5 +1,5 @@
 name: COCOCAM à la demande
-version: "0.1.4"
+version: "0.1.5"
 image: ghcr.io/ozanges/cococam-ha
 slug: cococam
 description: Direct COCOCAM à durée limitée, depuis Home Assistant

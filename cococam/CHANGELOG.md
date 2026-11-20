@@ -1,3 +1,7 @@
+# 0.1.5
+
+- Publication automatique de l’image. [Code source de cette version](https://github.com/ozanges/cococam-ha/commit/fcaa1be589a336f1db2464f0eaba4a753f99a0dd).
+
 # 0.1.4
 
 - Relance automatiquement le lecteur après une erreur temporaire de chargement HLS pendant le direct.
