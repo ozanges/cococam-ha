@@ -49,6 +49,12 @@ Choisir **Vue 1**, **Vue 2** ou **Les deux vues**. L’identifiant de l’applic
 
 La carte démarre à partir de **Voir le direct** et applique la durée et la coupure de la passerelle. Elle utilise le même accès Ingress administrateur que le panneau. Le choix des vues contrôle les pistes lues par le navigateur. Les deux objectifs de la caméra partagent toujours une session CloudEdge.
 
+## Batterie de la caméra
+
+Le panneau et la carte de tableau de bord affichent le dernier niveau connu, même quand le direct est fermé. L’application interroge CloudEdge au démarrage puis environ toutes les trente minutes, par une requête distincte du flux vidéo. La charge s’affiche lorsqu’elle est renseignée. L’heure de récupération apparaît dans le panneau et dans l’infobulle de la carte.
+
+Pour un capteur utilisable dans les tableaux de bord et les automatisations, activer **Publier la batterie via MQTT** dans la configuration de l’application. Un broker MQTT enregistré auprès du Supervisor et l’intégration MQTT de Home Assistant sont nécessaires. [Découverte MQTT](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery)
+
 ## Ouverture et coupure
 
 - Ouvrir le panneau latéral démarre la caméra au repos. La carte de tableau de bord démarre au clic. Le compteur commence quand les deux pistes sont disponibles.

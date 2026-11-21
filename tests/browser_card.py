@@ -10,7 +10,7 @@ from aiohttp import web
 from aiohttp.test_utils import TestServer
 from playwright.async_api import async_playwright, expect
 
-from bridge.server import STATE, make_app
+from bridge.server import BATTERY, STATE, make_app
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIX = "/api/hassio_ingress/test-token/"
@@ -104,6 +104,7 @@ async def check(hls_path):
         bridge = make_app({"email": "test@example.invalid", "password": "unused", "live_seconds": 15},
                           ingress=False, worker=worker, clock=lambda: now[0],
                           media=str(media.make_url("")).rstrip("/"))
+        bridge[BATTERY].sample = {"percent": 78, "charging": True, "observed_at": "2026-11-21T09:30:00+00:00"}
         mock = web.Application(middlewares=[authenticate])
         mock.router.add_get("/dashboard/{view}", dashboard)
         mock.add_subapp(PREFIX, bridge)
@@ -120,11 +121,14 @@ async def check(hls_path):
                     await page.goto(str(site.make_url(f"/dashboard/{view}")))
                     launcher = page.get_by_role("button", name="Voir le direct")
                     await expect(launcher).to_be_visible()
-                    assert await page.evaluate("window.calls") == []
+                    await expect(page.locator(".battery")).to_have_text("Batterie · 78 % · En charge")
+                    assert await page.locator("iframe").count() == 0
+                    await page.evaluate("window.calls = []")
                     assert len(starts) == count
                     await launcher.click()
                     iframe = page.frame_locator("iframe")
                     await expect(iframe.locator("#status")).to_have_text("En direct")
+                    await expect(iframe.locator("#battery")).to_contain_text("Batterie · 78 % · En charge")
                     assert await page.evaluate("window.calls") == [
                         "supervisor/ingress/info", "supervisor/ingress/session",
                     ]

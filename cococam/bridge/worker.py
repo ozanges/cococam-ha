@@ -1,7 +1,6 @@
 """Own a single authenticated CloudEdge connection and its two publishers."""
 
 import logging
-import os
 import re
 import signal
 import struct
@@ -10,6 +9,7 @@ import sys
 import threading
 from contextlib import suppress
 
+from .cloud import cloud_client, select_camera
 from .settings import options
 
 START_CODE = re.compile(rb"\x00\x00(?:\x00)?\x01")
@@ -118,27 +118,16 @@ def main(generation, rtsp_port):
             if not config.get("email") or not config.get("password"):
                 failure.append("credentials")
                 return
-            sys.path.insert(0, os.getenv("COCOCAM_UPSTREAM", "/opt/meari"))
-            from debug_tools.bootstrap import _bootstrap_integration_modules
-
-            mods = _bootstrap_integration_modules()
+            api, mods = cloud_client(config)
             from custom_components.cloudplus.p2p_streamer.codec import decrypt_stream_frame
 
-            mods["api"]._password_variants = lambda value: [value]
-            api = mods["api"].MeariApiClient(
-                email=config["email"], password=config["password"],
-                country_code=config.get("country", "FR"), phone_code=config.get("phone_code", "33"),
-                app_profile="cloudedge",
-            )
             phase = "login"
             api.login()
             if stop.is_set():
                 return
             phase = "camera_selection"
-            cameras = api.get_camera_devices()
-            name = (config.get("camera_name") or "").strip()
-            matches = [d for d in cameras if not name or d.get("deviceName") == name]
-            if len(matches) != 1:
+            device = select_camera(api, config)
+            if device is None:
                 failure.append(phase)
                 return
             phase = "stream"
@@ -153,7 +142,7 @@ def main(generation, rtsp_port):
                             output.write(*frame)
                     return super()._parse_stream_chunk(chunk)
 
-            streamer = CameraStream(api=api, device=matches[0], vvp_quality=105)
+            streamer = CameraStream(api=api, device=device, vvp_quality=105)
             active.append(streamer)
             if not stop.is_set():
                 streamer.run_session()

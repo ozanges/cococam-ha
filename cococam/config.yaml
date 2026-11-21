@@ -14,6 +14,8 @@ ingress_port: 8099
 panel_icon: mdi:cctv
 panel_title: COCOCAM
 panel_admin: true
+services:
+  - mqtt:want
 options:
   email: ""
   password: ""
@@ -21,6 +23,7 @@ options:
   country: FR
   phone_code: "33"
   live_seconds: 60
+  battery_mqtt: false
 schema:
   email: "str"
   password: "password"
@@ -28,3 +31,4 @@ schema:
   country: "match(^[A-Z]{2}$)"
   phone_code: "match(^[0-9]{1,4}$)"
   live_seconds: "int(15,300)"
+  battery_mqtt: "bool"

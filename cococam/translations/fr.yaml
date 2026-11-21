@@ -17,3 +17,6 @@ configuration:
   live_seconds:
     name: Durée du direct
     description: Nombre de secondes accordées à partir du début de la vidéo ou du dernier clic sur Prolonger.
+  battery_mqtt:
+    name: Publier la batterie via MQTT
+    description: Ajoute un capteur de batterie si un broker MQTT est enregistré auprès du Supervisor et que l’intégration MQTT est configurée.

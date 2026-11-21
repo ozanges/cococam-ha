@@ -3,6 +3,7 @@
 import asyncio
 import contextlib
 import hmac
+import logging
 import os
 import re
 import secrets
@@ -12,6 +13,7 @@ from pathlib import Path
 
 from aiohttp import ClientError, ClientSession, ClientTimeout, WSMsgType, web
 
+from .battery import Battery
 from .session import Session
 from .settings import live_duration, options
 
@@ -23,6 +25,7 @@ CONFIGURED = web.AppKey("configured", bool)
 INGRESS = web.AppKey("ingress", bool)
 MEDIA = web.AppKey("media", str)
 MEDIA_TOKEN = web.AppKey("media_token", str)
+BATTERY = web.AppKey("battery", Battery)
 SAFE_ERRORS = {"credentials", "login", "camera_selection", "stream", "worker", "disconnected"}
 MEDIA_FILE = re.compile(r"[a-zA-Z0-9._-]+\.(?:m3u8|mp4|m4s|ts)")
 
@@ -142,6 +145,10 @@ async def events(request):
     return ws
 
 
+async def battery_status(request):
+    return web.json_response(request.app[BATTERY].snapshot())
+
+
 async def playback(request):
     state = request.app[STATE]
     path = request.match_info
@@ -169,13 +176,14 @@ async def playback(request):
 
 
 def make_app(config, *, ingress=True, worker=None, clock=None,
-             media="http://127.0.0.1:8097", media_token=""):
+             media="http://127.0.0.1:8097", media_token="", battery=None):
     app = web.Application(middlewares=[security], client_max_size=1024)
     app[TOKEN] = secrets.token_urlsafe(24)
     app[CONFIGURED] = bool(config.get("email") and config.get("password"))
     app[INGRESS] = ingress
     app[MEDIA] = media
     app[MEDIA_TOKEN] = media_token
+    app[BATTERY] = battery or Battery(config, None)
 
     async def lifecycle(application):
         async with ClientSession(timeout=ClientTimeout(total=4)) as http:
@@ -194,7 +202,14 @@ def make_app(config, *, ingress=True, worker=None, clock=None,
                     await asyncio.sleep(.25 if state.task else 1)
 
             watchdog = asyncio.create_task(check_viewers())
+            telemetry = None
+            if battery is not None and application[CONFIGURED]:
+                telemetry = asyncio.create_task(battery.poll(http, state))
             yield
+            if telemetry:
+                telemetry.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await telemetry
             watchdog.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await watchdog
@@ -209,15 +224,17 @@ def make_app(config, *, ingress=True, worker=None, clock=None,
     app.router.add_get("/", index)
     app.router.add_get("/assets/{name}", asset)
     app.router.add_get("/api/events", events, allow_head=False)
+    app.router.add_get("/api/battery", battery_status)
     app.router.add_get(r"/media/{generation:[a-f0-9]{32}}/{lane:[01]}/{file}", playback, allow_head=False)
     return app
 
 
 async def with_relay():
     token = secrets.token_urlsafe(24)
+    config = options()
     app = make_app(
-        options(), ingress=os.getenv("COCOCAM_MODE", "ingress") == "ingress",
-        media_token=token,
+        config, ingress=os.getenv("COCOCAM_MODE", "ingress") == "ingress",
+        media_token=token, battery=Battery(config, Path("/data/battery.json")),
     )
 
     async def relay(_app):
@@ -235,4 +252,6 @@ async def with_relay():
 
 
 if __name__ == "__main__":
+    logging.basicConfig()
+    logging.getLogger("bridge.battery").setLevel(logging.INFO)
     web.run_app(with_relay(), host="0.0.0.0", port=8099, access_log=None, print=None)

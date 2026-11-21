@@ -11,6 +11,15 @@ function setIngressCookie(session) {
   document.cookie = `ingress_session=${session}; Path=/api/hassio_ingress/; SameSite=Strict${secure}`;
 }
 
+function ingressUrl(path) {
+  const url = new URL(path, location.origin);
+  if (url.origin !== location.origin || !/^\/api\/hassio_ingress\/[A-Za-z0-9_-]+\/?$/.test(url.pathname)) {
+    throw new Error("URL Ingress invalide");
+  }
+  if (!url.pathname.endsWith("/")) url.pathname += "/";
+  return url;
+}
+
 class CococamCard extends HTMLElement {
   constructor() {
     super();
@@ -21,6 +30,7 @@ class CococamCard extends HTMLElement {
                     flex-wrap: wrap; gap: 8px; padding: 0 16px 16px; }
         .launcher[hidden] { display: none; }
         .hint { color: var(--secondary-text-color); margin: 0; }
+        .battery { color: var(--secondary-text-color); margin: 4px 0 0; font-size: .85em; }
         button { cursor: pointer; font: inherit; font-weight: 600; min-height: 40px;
                  padding: 6px 14px; border: 0; border-radius: 20px;
                  background: var(--primary-color); color: var(--text-primary-color, white); }
@@ -30,12 +40,13 @@ class CococamCard extends HTMLElement {
       </style>
       <ha-card header="COCOCAM">
         <div class="launcher">
-          <p class="hint" role="status"></p>
+          <div><p class="hint" role="status"></p><p class="battery" hidden></p></div>
           <button type="button">Voir le direct</button>
         </div>
       </ha-card>`;
     this.launcher = root.querySelector(".launcher");
     this.hint = root.querySelector(".hint");
+    this.battery = root.querySelector(".battery");
     this.button = root.querySelector("button");
     this.button.addEventListener("click", () => this.open());
     this.onMessage = this.onMessage.bind(this);
@@ -60,12 +71,27 @@ class CococamCard extends HTMLElement {
     this.config = next;
     this.viewLabel = view[1];
     this.close();
+    this.battery.hidden = true;
+    this.refreshBattery();
   }
 
-  connectedCallback() { window.addEventListener("message", this.onMessage); }
+  set hass(value) {
+    const first = !this._hass;
+    this._hass = value;
+    if (first) this.refreshBattery();
+  }
+
+  get hass() { return this._hass; }
+
+  connectedCallback() {
+    window.addEventListener("message", this.onMessage);
+    this.refreshBattery();
+    this.batteryRefresh = setInterval(() => this.refreshBattery(), 60000);
+  }
 
   disconnectedCallback() {
     window.removeEventListener("message", this.onMessage);
+    clearInterval(this.batteryRefresh);
     this.close();
   }
 
@@ -85,6 +111,36 @@ class CococamCard extends HTMLElement {
     return result.session;
   }
 
+  async refreshBattery() {
+    if (!this.isConnected || !this.hass || !this.config || this.batteryPending ||
+        this.frame || this.opening || document.hidden) return;
+    const {slug} = this.config;
+    const active = () => this.isConnected && this.config?.slug === slug;
+    this.batteryPending = true;
+    try {
+      const info = await this.hass.callWS({type: "supervisor/ingress/info", slug});
+      if (!active() || info.state !== "started" || !info.ingress_url) return;
+      const url = new URL("./api/battery", ingressUrl(info.ingress_url));
+      let response = await fetch(url);
+      if ([401, 403].includes(response.status) && active() && !this.frame && !this.opening) {
+        const session = await this.createSession(slug);
+        if (!active() || this.frame || this.opening) return;
+        setIngressCookie(session);
+        response = await fetch(url);
+      }
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!active() || data === null) return;
+      this.battery.textContent = `Batterie · ${data.percent} %${data.charging ? " · En charge" : ""}`;
+      this.battery.title = `Dernière lecture · ${new Date(data.observed_at).toLocaleString("fr-FR")}`;
+      this.battery.hidden = false;
+    } catch {
+      // Battery telemetry is optional and independent of the live player.
+    } finally {
+      this.batteryPending = false;
+    }
+  }
+
   async open() {
     if (!this.hass || !this.config || this.frame || this.opening) return;
     const {slug, view} = this.config;
@@ -102,14 +158,10 @@ class CococamCard extends HTMLElement {
         this.close("Démarre l’application COCOCAM pour accéder au direct.");
         return;
       }
-      const url = new URL(info.ingress_url, location.origin);
-      if (url.origin !== location.origin || !/^\/api\/hassio_ingress\/[A-Za-z0-9_-]+\/?$/.test(url.pathname)) {
-        throw new Error("URL Ingress invalide");
-      }
+      const url = ingressUrl(info.ingress_url);
       let session = await this.createSession(slug);
       if (this.opening !== attempt) return;
       setIngressCookie(session);
-      if (!url.pathname.endsWith("/")) url.pathname += "/";
       url.searchParams.set("embed", view);
 
       const frame = document.createElement("iframe");

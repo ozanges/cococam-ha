@@ -1,5 +1,6 @@
 const element = (id) => document.getElementById(id);
 const status = element("status");
+const battery = element("battery");
 const timer = element("timer");
 const start = element("start");
 const extend = element("extend");
@@ -26,6 +27,21 @@ let videoCleanups = [];
 let activeDocument = true;
 let panelVisible = !("IntersectionObserver" in window);
 let startPending = false;
+
+async function refreshBattery() {
+  if (document.hidden) return;
+  try {
+    const response = await fetch("./api/battery");
+    if (!response.ok) return;
+    const data = await response.json();
+    if (data === null) return;
+    const time = new Date(data.observed_at).toLocaleString("fr-FR");
+    battery.textContent = `Batterie · ${data.percent} %${data.charging ? " · En charge" : ""} · ${time}`;
+    battery.hidden = false;
+  } catch {
+    // Keep the last reading during short Ingress outages.
+  }
+}
 
 function startRequested() {
   if (startPending && !document.hidden && socket?.readyState === WebSocket.OPEN) {
@@ -243,3 +259,5 @@ if (embedded && window.parent !== window) {
   window.parent.postMessage({type: "cococam/ready"}, location.origin);
 }
 connect();
+refreshBattery();
+setInterval(refreshBattery, 60000);

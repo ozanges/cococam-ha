@@ -17,3 +17,6 @@ configuration:
   live_seconds:
     name: Live view duration
     description: Seconds allowed when the video starts or the timer is extended.
+  battery_mqtt:
+    name: Publish battery level via MQTT
+    description: Adds a battery sensor when a broker is registered with the Supervisor and the MQTT integration is configured.
