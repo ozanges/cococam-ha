@@ -1,6 +1,6 @@
 FROM bluenviron/mediamtx:1.21.4@sha256:c730bccdbc8739f8f0c13cefe9bea8b61926f599b88fa4d0d229baa91846c7bc AS relay
 
-FROM alpine:3.22@sha256:49340b346798875b5592e5d420241f2f9cfba5f47e62ebb1446a1b34734e898f AS sources
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS sources
 RUN apk add --no-cache ca-certificates git npm
 RUN git init -q /opt/meari \
     && git -C /opt/meari fetch --depth=1 https://github.com/saidtezel/hass-cloudedge-meari.git 4f52459653aa65d246f5d7421fbab8bac0a4af26 \
