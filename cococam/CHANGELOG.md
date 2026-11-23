@@ -1,3 +1,7 @@
+# 0.1.8
+
+- Publication automatique de l’image. [Code source de cette version](https://github.com/ozanges/cococam-ha/commit/5491c1ebc4beb84f42057354a04a551eeee43175).
+
 # 0.1.7
 
 - Publication automatique de l’image. [Code source de cette version](https://github.com/ozanges/cococam-ha/commit/ddb6c003f14bd83d09ca0c23f6870e893f2153c2).
