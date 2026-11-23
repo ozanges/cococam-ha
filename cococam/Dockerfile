@@ -21,7 +21,10 @@ COPY --from=sources /opt/meari /opt/meari
 COPY --from=sources /opt/hls /opt/hls
 WORKDIR /opt/cococam
 COPY requirements.txt ./
-RUN pip install --no-cache-dir --require-hashes -r requirements.txt
+RUN locked_python=$(sed -n 's/^#.* --python-version \([0-9][0-9.]*\) .*/\1/p' requirements.txt) \
+    && runtime_python=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")') \
+    && (test "$locked_python" = "$runtime_python" || { echo "Regenerate requirements.txt for Python $runtime_python (locked: $locked_python)" >&2; exit 1; }) \
+    && pip install --no-cache-dir --require-hashes --only-binary=:all: -r requirements.txt
 COPY bridge ./bridge
 COPY mediamtx.yml ./
 COPY licenses /usr/share/doc/cococam
