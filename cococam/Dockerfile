@@ -12,7 +12,7 @@ RUN npm ci --ignore-scripts --no-audit --no-fund \
     && mkdir -p /opt/hls \
     && cp node_modules/hls.js/dist/hls.min.js node_modules/hls.js/LICENSE /opt/hls/
 
-FROM python:3.15-slim-bookworm@sha256:96599df822d0e1c6bb700014a05c7f3c8cabc6e0f7ff3c4f9f69cee033b4b5d9
+FROM python:3.15-slim-bookworm@sha256:498829c717b1e59fc42f0e7865eafe4e04ca0f70a3769d4ae70ba218df54507c
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update && apt-get install --no-install-recommends -y ca-certificates ffmpeg \
     && rm -rf /var/lib/apt/lists/*
